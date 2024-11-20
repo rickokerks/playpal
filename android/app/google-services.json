@@ -1,21 +1,21 @@
 {
   "project_info": {
-    "project_number": "1016841410688",
-    "project_id": "labexam1-dbb70",
-    "storage_bucket": "labexam1-dbb70.firebasestorage.app"
+    "project_number": "933734485463",
+    "project_id": "playpal-b9097",
+    "storage_bucket": "playpal-b9097.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:1016841410688:android:820ab72ad09fb777d6ee65",
+        "mobilesdk_app_id": "1:933734485463:android:dcedba5dad0fbc9a908f92",
         "android_client_info": {
-          "package_name": "com.ej.playpal"
+          "package_name": "com.example.lab_exam1_form"
         }
       },
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyBK3La1lxINn0ndHJiv10YX1scVk0ihMg0"
+          "current_key": "AIzaSyBwX2hri4-t4PpOpbiQXXiEbp4GdFd28xg"
         }
       ],
       "services": {
