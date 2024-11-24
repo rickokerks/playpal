@@ -33,6 +33,8 @@ dependencies:
   flutter:
     sdk: flutter
   intl: ^0.20.0
+  email_validator: ^2.0.0
+  cloud_firestore: ^5.4.0
 
 dev_dependencies:
   flutter_test:
