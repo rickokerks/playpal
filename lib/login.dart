@@ -191,8 +191,8 @@ class _LoginPageState extends State<LoginPage> {
                   alignment: Alignment.bottomCenter,
                   child: Padding(
                     padding: const EdgeInsets.only(top: 20.0),
-                    child: Image.network(
-                      '', // Place your logo URL here
+                    child: Image.asset(
+                      'assets/logo.png', // Place your logo URL here
                       width: 120,
                       height: 120,
                     ),
