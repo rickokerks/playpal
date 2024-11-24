@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
-import 'login.dart'; 
-//ra ra ra ahh ahh
-void main() {
-  runApp(MyApp());
+import 'package:firebase_core/firebase_core.dart';
+import 'login.dart';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(); // Initializes Firebase
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -14,8 +19,7 @@ class MyApp extends StatelessWidget {
       theme: ThemeData.dark().copyWith(
         scaffoldBackgroundColor: Colors.black,
       ),
-      home: LoginPage(
-          userData: {}), 
+      home: const LoginPage(), // Adjusted to a default LoginPage constructor
     );
   }
 }

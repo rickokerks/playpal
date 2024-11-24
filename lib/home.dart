@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'login.dart';
 
 class HomePage extends StatelessWidget {
+  const HomePage({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -19,7 +21,7 @@ class HomePage extends StatelessWidget {
           children: [
             Container(
               alignment: Alignment.center,
-              padding: EdgeInsets.symmetric(vertical: 20),
+              padding: const EdgeInsets.symmetric(vertical: 20),
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.center,
@@ -32,7 +34,7 @@ class HomePage extends StatelessWidget {
                       color: Colors.white,
                     ),
                   ),
-                  SizedBox(height: 20),
+                  const SizedBox(height: 20),
                   Image.network(
                     'https://preview.redd.it/absolute-cinema-v0-uvjdy3kanuxd1.jpeg?auto=webp&s=085bf8df75d49c0fbad6a162b5aac9f49a28a2e2', // Replace with your image URL
                     height: 200,
@@ -42,27 +44,25 @@ class HomePage extends StatelessWidget {
                 ],
               ),
             ),
-            SizedBox(height: 30),
+            const SizedBox(height: 30),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20.0),
               child: ElevatedButton(
                 onPressed: () {
                   Navigator.pushReplacement(
                     context,
-                    MaterialPageRoute(
-                      builder: (context) => LoginPage(userData: {}),
-                    ),
+                    MaterialPageRoute(builder: (context) => const LoginPage()),
                   );
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.white,
                   foregroundColor: Colors.black,
-                  minimumSize: Size(double.infinity, 45),
+                  minimumSize: const Size(double.infinity, 45),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
                 ),
-                child: Text(
+                child: const Text(
                   'Logout',
                   style: TextStyle(fontSize: 16),
                 ),
