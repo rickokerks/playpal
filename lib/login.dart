@@ -14,6 +14,7 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController _usernameOrEmailController =
       TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  bool _passwordVisible = false; // Toggle for password visibility
 
   Future<void> _login() async {
     try {
@@ -89,7 +90,7 @@ class _LoginPageState extends State<LoginPage> {
                     children: [
                       // Username/Email input
                       Text(
-                        'Username or Email',
+                        'Email Address',
                         style: TextStyle(color: Colors.white, fontSize: 16),
                       ),
                       SizedBox(height: 8),
@@ -116,7 +117,7 @@ class _LoginPageState extends State<LoginPage> {
                       SizedBox(height: 8),
                       TextFormField(
                         controller: _passwordController,
-                        obscureText: true, // No dynamic password visibility
+                        obscureText: !_passwordVisible, // Toggle visibility
                         style: TextStyle(color: Colors.black),
                         decoration: InputDecoration(
                           filled: true,
@@ -127,6 +128,19 @@ class _LoginPageState extends State<LoginPage> {
                           ),
                           contentPadding: EdgeInsets.symmetric(
                               vertical: 12, horizontal: 16),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _passwordVisible
+                                  ? Icons.visibility
+                                  : Icons.visibility_off,
+                              color: Colors.black,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                _passwordVisible = !_passwordVisible;
+                              });
+                            },
+                          ),
                         ),
                       ),
                       SizedBox(height: 16),
