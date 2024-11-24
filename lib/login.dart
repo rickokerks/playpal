@@ -136,7 +136,7 @@ class LoginPage extends StatelessWidget {
                   child: Padding(
                     padding: const EdgeInsets.only(top: 20.0),
                     child: Image.network(
-                      'https://cdn.discordapp.com/attachments/563925842766331915/1307731528813514872/Playpal2_transparent.png?ex=673b5f64&is=673a0de4&hm=9d64dea22983d1e2b5a84720e10046bf36e9ed5fd268cfc5a8f3a60373603502&',
+                      '',
                       width: 120,
                       height: 120,
                     ),
