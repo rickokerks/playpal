@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'login.dart';
-
+import 'login.dart'; // Ensure the LoginPage is defined
+import 'home.dart'; // Ensure the HomePage is defined
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -20,7 +20,12 @@ class MyApp extends StatelessWidget {
       theme: ThemeData.dark().copyWith(
         scaffoldBackgroundColor: Colors.black,
       ),
-      home: const LoginPage(), // Adjusted to a default LoginPage constructor
+      initialRoute: '/login', // Start from login page
+      routes: {
+        '/login': (context) => const LoginPage(), // Navigate to LoginPage
+        '/home': (context) =>
+            const HomePage(accountId: 'user123'), // Navigate to HomePage
+      },
     );
   }
 }
