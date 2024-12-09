@@ -19,14 +19,19 @@ class _LoginPageState extends State<LoginPage> {
   Future<void> _login() async {
     try {
       // Attempt to log in with email (Firebase only supports email and password authentication)
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
+      UserCredential userCredential =
+          await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: _usernameOrEmailController.text.trim(),
         password: _passwordController.text.trim(),
       );
-      // If successful, navigate to the HomePage
+
+      // If successful, navigate to the HomePage with the accountId
+      String accountId = userCredential.user?.uid ?? "default_id";
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => const HomePage()),
+        MaterialPageRoute(
+          builder: (context) => HomePage(accountId: accountId),
+        ),
       );
     } on FirebaseAuthException catch (e) {
       // If there is an error (e.g. wrong password), show an error message
