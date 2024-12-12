@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:audioplayers/audioplayers.dart';
@@ -42,6 +41,36 @@ class _HomePageState extends State<HomePage> {
       });
     }
   }
+  bool _isShuffling = false; // To track shuffle state
+  bool _isRepeating = false; // To track repeat state
+
+// Toggle Shuffle
+  void _toggleShuffle() {
+    setState(() {
+      _isShuffling = !_isShuffling;
+      if (_isShuffling) {
+        // Implement the logic to shuffle the songs
+        songs.shuffle();
+      }
+    });
+  }
+
+// Toggle Repeat
+  void _toggleRepeat() {
+    setState(() {
+      _isRepeating = !_isRepeating;
+    });
+  }
+
+// Close the current song
+  void _closeSong() {
+    _audioPlayer.stop(); // Stop the song
+    setState(() {
+      currentSong = null; // Clear the current song
+      _isPlaying = false; // Set the playing state to false
+    });
+  }
+
 
   // Function to switch tabs
   void switchTab(bool isSongsTabSelected) {
@@ -477,6 +506,34 @@ class _HomePageState extends State<HomePage> {
                             icon: const Icon(Icons.skip_next,
                                 color: Colors.white),
                             onPressed: _nextSong,
+                          ),
+                          // Shuffle button
+                          IconButton(
+                            icon: Icon(
+                              Icons.shuffle,
+                              color: Colors.white,
+                              size: 28.0,
+                            ),
+                            onPressed:
+                                _toggleShuffle, // Implement toggleShuffle
+                          ),
+                          // Repeat button
+                          IconButton(
+                            icon: Icon(
+                              _isRepeating ? Icons.repeat_one : Icons.repeat,
+                              color: Colors.white,
+                              size: 28.0,
+                            ),
+                            onPressed: _toggleRepeat, // Implement toggleRepeat
+                          ),
+                          // Close button
+                          IconButton(
+                            icon: Icon(
+                              Icons.close,
+                              color: Colors.white,
+                              size: 28.0,
+                            ),
+                            onPressed: _closeSong, // Implement closeSong
                           ),
                         ],
                       ),
