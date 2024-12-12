@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'package:marquee/marquee.dart';
 
 class HomePage extends StatefulWidget {
   final String accountId;
@@ -23,24 +24,24 @@ class _HomePageState extends State<HomePage> {
   Duration _totalDuration = Duration.zero;
 
   // Function to pick an MP3 file
-Future<void> pickMusicFile() async {
-  FilePickerResult? result = await FilePicker.platform.pickFiles(
-    type: FileType.custom,
-    allowedExtensions: ['mp3'],
-  );
+  Future<void> pickMusicFile() async {
+    FilePickerResult? result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['mp3'],
+    );
 
-  if (result != null && result.files.single.path != null) {
-    final filePath = result.files.single.path!;
-    final fileName = result.files.single.name;
+    if (result != null && result.files.single.path != null) {
+      final filePath = result.files.single.path!;
+      final fileName = result.files.single.name;
 
-    // Remove the ".mp3" extension from the song title
-    final songTitle = fileName.replaceAll('.mp3', '');
+      // Remove the ".mp3" extension from the song title
+      final songTitle = fileName.replaceAll('.mp3', '');
 
-    setState(() {
-      songs.add({"title": songTitle, "path": filePath});
-    });
+      setState(() {
+        songs.add({"title": songTitle, "path": filePath});
+      });
+    }
   }
-}
 
   // Function to switch tabs
   void switchTab(bool isSongsTabSelected) {
@@ -458,27 +459,25 @@ Future<void> pickMusicFile() async {
                       const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   child: Column(
                     children: [
+                      // Close button above the slider, aligned to the right and smaller size
                       Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
                         children: [
                           IconButton(
-                            icon: const Icon(Icons.skip_previous,
-                                color: Colors.white),
-                            onPressed: _previousSong,
-                          ),
-                          IconButton(
-                            icon: Icon(
-                              _isPlaying ? Icons.pause : Icons.play_arrow,
-                              color: Colors.white,
-                            ),
-                            onPressed: _togglePlayPause,
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.skip_next,
-                                color: Colors.white),
-                            onPressed: _nextSong,
+                            icon: const Icon(Icons.close, color: Colors.white),
+                            iconSize: 20, // Smaller size for the close button
+                            onPressed: () {
+                              setState(() {
+                                _audioPlayer.stop(); // Stop the audio
+                                currentSong = null; // Clear the current song
+                                _isPlaying = false; // Reset play/pause state
+                              });
+                            },
                           ),
                         ],
                       ),
+
+                      // Slider for audio position
                       Row(
                         children: [
                           Expanded(
@@ -498,14 +497,46 @@ Future<void> pickMusicFile() async {
                           ),
                         ],
                       ),
-                      Text(
-                        currentSong!,
-                        style: const TextStyle(color: Colors.white),
-                        overflow: TextOverflow.ellipsis,
+
+                      // Song name and control buttons in 1 row
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          // Song name on the left
+                          Text(
+                            currentSong!,
+                            style: const TextStyle(color: Colors.white),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+
+                          // Control buttons on the right
+                          Row(
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.skip_previous,
+                                    color: Colors.white),
+                                onPressed: _previousSong,
+                              ),
+                              IconButton(
+                                icon: Icon(
+                                  _isPlaying ? Icons.pause : Icons.play_arrow,
+                                  color: Colors.white,
+                                ),
+                                onPressed: _togglePlayPause,
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.skip_next,
+                                    color: Colors.white),
+                                onPressed: _nextSong,
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
                     ],
                   ),
                 ),
+
             ],
           ),
         ),
