@@ -23,54 +23,24 @@ class _HomePageState extends State<HomePage> {
   Duration _totalDuration = Duration.zero;
 
   // Function to pick an MP3 file
-  Future<void> pickMusicFile() async {
-    FilePickerResult? result = await FilePicker.platform.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: ['mp3'],
-    );
+Future<void> pickMusicFile() async {
+  FilePickerResult? result = await FilePicker.platform.pickFiles(
+    type: FileType.custom,
+    allowedExtensions: ['mp3'],
+  );
 
-    if (result != null && result.files.single.path != null) {
-      final filePath = result.files.single.path!;
-      final fileName = result.files.single.name;
+  if (result != null && result.files.single.path != null) {
+    final filePath = result.files.single.path!;
+    final fileName = result.files.single.name;
 
-      // Remove the ".mp3" extension from the song title
-      final songTitle = fileName.replaceAll('.mp3', '');
+    // Remove the ".mp3" extension from the song title
+    final songTitle = fileName.replaceAll('.mp3', '');
 
-      setState(() {
-        songs.add({"title": songTitle, "path": filePath});
-      });
-    }
-  }
-  bool _isShuffling = false; // To track shuffle state
-  bool _isRepeating = false; // To track repeat state
-
-// Toggle Shuffle
-  void _toggleShuffle() {
     setState(() {
-      _isShuffling = !_isShuffling;
-      if (_isShuffling) {
-        // Implement the logic to shuffle the songs
-        songs.shuffle();
-      }
+      songs.add({"title": songTitle, "path": filePath});
     });
   }
-
-// Toggle Repeat
-  void _toggleRepeat() {
-    setState(() {
-      _isRepeating = !_isRepeating;
-    });
-  }
-
-// Close the current song
-  void _closeSong() {
-    _audioPlayer.stop(); // Stop the song
-    setState(() {
-      currentSong = null; // Clear the current song
-      _isPlaying = false; // Set the playing state to false
-    });
-  }
-
+}
 
   // Function to switch tabs
   void switchTab(bool isSongsTabSelected) {
@@ -506,34 +476,6 @@ class _HomePageState extends State<HomePage> {
                             icon: const Icon(Icons.skip_next,
                                 color: Colors.white),
                             onPressed: _nextSong,
-                          ),
-                          // Shuffle button
-                          IconButton(
-                            icon: Icon(
-                              Icons.shuffle,
-                              color: Colors.white,
-                              size: 28.0,
-                            ),
-                            onPressed:
-                                _toggleShuffle, // Implement toggleShuffle
-                          ),
-                          // Repeat button
-                          IconButton(
-                            icon: Icon(
-                              _isRepeating ? Icons.repeat_one : Icons.repeat,
-                              color: Colors.white,
-                              size: 28.0,
-                            ),
-                            onPressed: _toggleRepeat, // Implement toggleRepeat
-                          ),
-                          // Close button
-                          IconButton(
-                            icon: Icon(
-                              Icons.close,
-                              color: Colors.white,
-                              size: 28.0,
-                            ),
-                            onPressed: _closeSong, // Implement closeSong
                           ),
                         ],
                       ),
