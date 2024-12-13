@@ -29,6 +29,10 @@ class _HomePageState extends State<HomePage> {
   Duration _currentPosition = Duration.zero;
   Duration _totalDuration = Duration.zero;
   List<bool> expandedStates = [];
+  bool _isShuffleOn = false;
+  String _repeatMode = 'off'; // 'off', 'all', 'one'
+  List<int> _shuffledIndices = [];
+  int? _currentShuffleIndex;
 
   // Function to pick an MP3 file
   Future<void> pickMusicFile() async {
@@ -48,6 +52,34 @@ class _HomePageState extends State<HomePage> {
         songs.add({"title": songTitle, "path": filePath});
       });
     }
+  }
+  void _toggleShuffle() {
+    setState(() {
+      _isShuffleOn = !_isShuffleOn;
+      if (_isShuffleOn) {
+        // Create shuffled list of indices excluding current song
+        List<int> indices = List.generate(songs.length, (i) => i);
+        indices.remove(_currentIndex);
+        indices.shuffle();
+        _shuffledIndices = [_currentIndex, ...indices];
+        _currentShuffleIndex = 0;
+      }
+    });
+  }
+  void _toggleRepeat() {
+    setState(() {
+      switch (_repeatMode) {
+        case 'off':
+          _repeatMode = 'all';
+          break;
+        case 'all':
+          _repeatMode = 'one';
+          break;
+        case 'one':
+          _repeatMode = 'off';
+          break;
+      }
+    });
   }
   void _showSortOptionsDialog() {
     showDialog(
@@ -534,26 +566,75 @@ class _HomePageState extends State<HomePage> {
 
   // Function to play the next song
   void _nextSong() {
-    if (_currentIndex < songs.length - 1) {
-      setState(() {
-        _currentIndex++;
-        currentSong = songs[_currentIndex]["title"];
+    if (songs.isEmpty) return;
+
+    setState(() {
+      if (_repeatMode == 'one') {
+        // Replay current song
+        _audioPlayer.seek(Duration.zero);
         _audioPlayer.play(DeviceFileSource(songs[_currentIndex]["path"]!));
-        _isPlaying = true;
-      });
-    }
+        return;
+      }
+
+      if (_isShuffleOn) {
+        if (_currentShuffleIndex! < _shuffledIndices.length - 1) {
+          _currentShuffleIndex = _currentShuffleIndex! + 1;
+          _currentIndex = _shuffledIndices[_currentShuffleIndex!];
+        } else if (_repeatMode == 'all') {
+          // Reshuffle and start from beginning
+          List<int> indices = List.generate(songs.length, (i) => i);
+          indices.shuffle();
+          _shuffledIndices = indices;
+          _currentShuffleIndex = 0;
+          _currentIndex = _shuffledIndices[0];
+        } else {
+          return; // No more songs to play
+        }
+      } else {
+        if (_currentIndex < songs.length - 1) {
+          _currentIndex++;
+        } else if (_repeatMode == 'all') {
+          _currentIndex = 0;
+        } else {
+          return; // No more songs to play
+        }
+      }
+
+      currentSong = songs[_currentIndex]["title"];
+      _audioPlayer.play(DeviceFileSource(songs[_currentIndex]["path"]!));
+      _isPlaying = true;
+    });
   }
 
   // Function to play the previous song
   void _previousSong() {
-    if (_currentIndex > 0) {
-      setState(() {
-        _currentIndex--;
-        currentSong = songs[_currentIndex]["title"];
-        _audioPlayer.play(DeviceFileSource(songs[_currentIndex]["path"]!));
-        _isPlaying = true;
-      });
-    }
+    if (songs.isEmpty) return;
+
+    setState(() {
+      if (_isShuffleOn) {
+        if (_currentShuffleIndex! > 0) {
+          _currentShuffleIndex = _currentShuffleIndex! - 1;
+          _currentIndex = _shuffledIndices[_currentShuffleIndex!];
+        } else if (_repeatMode == 'all') {
+          _currentShuffleIndex = _shuffledIndices.length - 1;
+          _currentIndex = _shuffledIndices[_currentShuffleIndex!];
+        } else {
+          return; // No previous songs
+        }
+      } else {
+        if (_currentIndex > 0) {
+          _currentIndex--;
+        } else if (_repeatMode == 'all') {
+          _currentIndex = songs.length - 1;
+        } else {
+          return; // No previous songs
+        }
+      }
+
+      currentSong = songs[_currentIndex]["title"];
+      _audioPlayer.play(DeviceFileSource(songs[_currentIndex]["path"]!));
+      _isPlaying = true;
+    });
   }
 // Delete a song from the current playlist
   void _deleteSongFromPlaylist(int index) {
@@ -893,7 +974,6 @@ class _HomePageState extends State<HomePage> {
     super.initState();
     expandedStates = List<bool>.filled(playlists.length, false);
 
-
     _audioPlayer.onPositionChanged.listen((Duration p) {
       setState(() {
         _currentPosition = p;
@@ -904,6 +984,11 @@ class _HomePageState extends State<HomePage> {
       setState(() {
         _totalDuration = d;
       });
+    });
+
+    // Add this completion listener
+    _audioPlayer.onPlayerComplete.listen((event) {
+      _nextSong(); // This will handle repeat and shuffle automatically
     });
   }
 
@@ -1010,90 +1095,159 @@ class _HomePageState extends State<HomePage> {
               const SizedBox(height: 16),
               
               if (currentSong != null)
-                Container(
-                  color: Colors.grey[900],
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  child: Column(
+  Container(
+    decoration: BoxDecoration(
+      color: Colors.black.withOpacity(0.95),
+      border: Border(
+        top: BorderSide(
+          color: Colors.grey[900]!,
+          width: 0.5,
+        ),
+      ),
+    ),
+    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Song title at the top
+        Text(
+          currentSong!,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        const SizedBox(height: 8),
+        
+        Row(
+          children: [
+            // Album art / music icon
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: Colors.grey[900],
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: const Icon(
+                Icons.music_note,
+                color: Colors.white,
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 12),
+
+            // Progress slider and controls
+            Expanded(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Time indicators and slider
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      // Close button above the slider, aligned to the right and smaller size
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          IconButton(
-                            icon: const Icon(Icons.close, color: Colors.white),
-                            iconSize: 20, // Smaller size for the close button
-                            onPressed: () {
+                      // Current time
+                      Text(
+                        '${(_currentPosition.inMinutes).toString().padLeft(2, '0')}:${(_currentPosition.inSeconds % 60).toString().padLeft(2, '0')}',
+                        style: TextStyle(
+                          color: Colors.grey[400],
+                          fontSize: 12,
+                        ),
+                      ),
+                      Expanded(
+                        child: SliderTheme(
+                          data: SliderThemeData(
+                            trackHeight: 2,
+                            thumbShape: const RoundSliderThumbShape(
+                              enabledThumbRadius: 4,
+                            ),
+                            overlayShape: const RoundSliderOverlayShape(
+                              overlayRadius: 8,
+                            ),
+                            activeTrackColor: Colors.white,
+                            inactiveTrackColor: Colors.grey[800],
+                            thumbColor: Colors.white,
+                          ),
+                          child: Slider(
+                            value: _currentPosition.inSeconds.toDouble(),
+                            min: 0.0,
+                            max: _totalDuration.inSeconds.toDouble(),
+                            onChanged: (double value) {
                               setState(() {
-                                _audioPlayer.stop(); // Stop the audio
-                                currentSong = null; // Clear the current song
-                                _isPlaying = false; // Reset play/pause state
+                                _audioPlayer.seek(Duration(seconds: value.toInt()));
                               });
                             },
                           ),
-                        ],
+                        ),
                       ),
-
-                      // Slider for audio position
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Slider(
-                              activeColor: Colors.white,
-                              inactiveColor: Colors.grey[600],
-                              value: _currentPosition.inSeconds.toDouble(),
-                              min: 0.0,
-                              max: _totalDuration.inSeconds.toDouble(),
-                              onChanged: (double value) {
-                                setState(() {
-                                  _audioPlayer
-                                      .seek(Duration(seconds: value.toInt()));
-                                });
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
-
-                      // Song name and control buttons in 1 row
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          // Song name on the left
-                          Text(
-                            currentSong!,
-                            style: const TextStyle(color: Colors.white),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-
-                          // Control buttons on the right
-                          Row(
-                            children: [
-                              IconButton(
-                                icon: const Icon(Icons.skip_previous,
-                                    color: Colors.white),
-                                onPressed: _previousSong,
-                              ),
-                              IconButton(
-                                icon: Icon(
-                                  _isPlaying ? Icons.pause : Icons.play_arrow,
-                                  color: Colors.white,
-                                ),
-                                onPressed: _togglePlayPause,
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.skip_next,
-                                    color: Colors.white),
-                                onPressed: _nextSong,
-                              ),
-                            ],
-                          ),
-                        ],
+                      // Total duration
+                      Text(
+                        '${(_totalDuration.inMinutes).toString().padLeft(2, '0')}:${(_totalDuration.inSeconds % 60).toString().padLeft(2, '0')}',
+                        style: TextStyle(
+                          color: Colors.grey[400],
+                          fontSize: 12,
+                        ),
                       ),
                     ],
                   ),
-                ),
-
+                  const SizedBox(height: 8),
+                  // Control buttons
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      IconButton(
+                        icon: Icon(
+                          Icons.shuffle,
+                          color: _isShuffleOn ? Colors.green : Colors.white,
+                        ),
+                        iconSize: 20,
+                        onPressed: _toggleShuffle,
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.skip_previous, color: Colors.white),
+                        iconSize: 20,
+                        onPressed: _previousSong,
+                      ),
+                      Container(
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.white.withOpacity(0.1),
+                        ),
+                        child: IconButton(
+                          icon: Icon(
+                            _isPlaying ? Icons.pause : Icons.play_arrow,
+                            color: Colors.white,
+                          ),
+                          iconSize: 24,
+                          onPressed: _togglePlayPause,
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.skip_next, color: Colors.white),
+                        iconSize: 20,
+                        onPressed: _nextSong,
+                      ),
+                      IconButton(
+                        icon: Icon(
+                          _repeatMode == 'one' ? Icons.repeat_one : Icons.repeat,
+                          color: _repeatMode != 'off' ? Colors.green : Colors.white,
+                        ),
+                        iconSize: 20,
+                        onPressed: _toggleRepeat,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ],
+    ),
+  ),
             ],
           ),
         ),
