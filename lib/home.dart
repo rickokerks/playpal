@@ -4,6 +4,7 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:marquee/marquee.dart';
 
 class HomePage extends StatefulWidget {
+  
   final String accountId;
 
   const HomePage({Key? key, required this.accountId}) : super(key: key);
@@ -14,6 +15,11 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   List<Map<String, String>> songs = [];
+  List<Map<String, dynamic>> playlists = [];
+  Map<String, dynamic>? currentPlaylist;
+  TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+  String _sortBy = 'date';
   String? currentSong;
   bool isSongsTab = true;
   int _currentIndex = 0;
@@ -22,6 +28,7 @@ class _HomePageState extends State<HomePage> {
   AudioPlayer _audioPlayer = AudioPlayer();
   Duration _currentPosition = Duration.zero;
   Duration _totalDuration = Duration.zero;
+  List<bool> expandedStates = [];
 
   // Function to pick an MP3 file
   Future<void> pickMusicFile() async {
@@ -41,6 +48,467 @@ class _HomePageState extends State<HomePage> {
         songs.add({"title": songTitle, "path": filePath});
       });
     }
+  }
+  void _showSortOptionsDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: Colors.grey[800],
+          title: const Text(
+            'Sort By',
+            style: TextStyle(color: Colors.white),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TextButton(
+                onPressed: () {
+                  setState(() {
+                    _sortBy = 'date';
+                  });
+                  Navigator.pop(context);
+                },
+                child: Text(
+                  'Date Added',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight:
+                        _sortBy == 'date' ? FontWeight.bold : FontWeight.normal,
+                  ),
+                ),
+              ),
+              TextButton(
+                onPressed: () {
+                  setState(() {
+                    _sortBy = 'name';
+                  });
+                  Navigator.pop(context);
+                },
+                child: Text(
+                  'Name',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight:
+                        _sortBy == 'name' ? FontWeight.bold : FontWeight.normal,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+  
+   // Songs Tab Widget
+ Widget _buildSongsTab() {
+    // Filter songs based on search query
+    List<Map<String, String>> filteredSongs = songs.where((song) {
+      return song["title"]!.toLowerCase().contains(_searchQuery.toLowerCase());
+    }).toList();
+
+    // Sort songs based on selected option
+    if (_sortBy == 'name') {
+      filteredSongs.sort((a, b) => a["title"]!.compareTo(b["title"]!));
+    }
+    // For date sorting we keep the original order since songs are added chronologically
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            IconButton(
+              icon: const Icon(Icons.add_circle, color: Colors.white),
+              onPressed: pickMusicFile,
+            ),
+            const SizedBox(width: 8),
+            const Text(
+              "Add a local music file",
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+            ),
+            const Spacer(),
+            IconButton(
+              icon: const Icon(Icons.sort, color: Colors.white),
+              onPressed: _showSortOptionsDialog,
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        // Search bar
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          decoration: BoxDecoration(
+            color: Colors.grey[900],
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.search, color: Colors.grey[400]),
+              const SizedBox(width: 8),
+              Expanded(
+                child: TextField(
+                  controller: _searchController,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: InputDecoration(
+                    hintText: 'Search songs...',
+                    hintStyle: TextStyle(color: Colors.grey[400]),
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  onChanged: (value) {
+                    setState(() {
+                      _searchQuery = value;
+                    });
+                  },
+                ),
+              ),
+              if (_searchQuery.isNotEmpty)
+                IconButton(
+                  icon: const Icon(Icons.clear, color: Colors.grey),
+                  onPressed: () {
+                    setState(() {
+                      _searchQuery = '';
+                      _searchController.clear();
+                    });
+                  },
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+        Expanded(
+          child: ListView.builder(
+            itemCount: filteredSongs.length,
+            itemBuilder: (context, index) {
+              final song = filteredSongs[index];
+              return GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _currentIndex =
+                        songs.indexOf(song); // Get the original index
+                    currentSong = song["title"];
+                    _audioPlayer.play(DeviceFileSource(song["path"]!));
+                    _isPlaying = true;
+                  });
+                },
+                onLongPress: () => _showSongOptionsDialog(
+                    songs.indexOf(song)), // Use original index
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8.0),
+                  child: Row(
+                    children: [
+                      Icon(Icons.music_note, color: Colors.grey[400]),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          song["title"]!,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Playlists Tab Widget
+  Widget _buildPlaylistsTab() {
+    if (currentPlaylist == null) {
+      // Show the list of playlists
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.add_circle, color: Colors.white),
+                onPressed: _createPlaylist,
+              ),
+              const SizedBox(width: 8),
+              const Text(
+                "Create a playlist",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Expanded(
+            child: ListView.builder(
+              itemCount: playlists.length,
+              itemBuilder: (context, index) {
+                final playlist = playlists[index];
+                return ListTile(
+                  leading: Icon(Icons.folder, color: Colors.grey[400]),
+                  title: Text(
+                    playlist["name"]!,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                    ),
+                  ),
+                  subtitle: Text(
+                    "${playlist["songs"].length} songs",
+                    style: TextStyle(
+                      color: Colors.grey[400],
+                      fontSize: 14,
+                    ),
+                  ),
+                  onTap: () {
+                    setState(() {
+                      currentPlaylist = playlist;
+                    });
+                  },
+                  onLongPress: () => _showPlaylistOptionsDialog(index),
+                );
+              },
+            ),
+          ),
+        ],
+      );
+  } else {
+    // Show the songs in the selected playlist
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            IconButton(
+              icon: const Icon(Icons.arrow_back, color: Colors.white),
+              onPressed: () {
+                setState(() {
+                  currentPlaylist = null; // Return to playlist list
+                });
+              },
+            ),
+            const SizedBox(width: 8),
+            Text(
+              currentPlaylist!["name"]!,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        Expanded(
+          child: currentPlaylist!["songs"].isEmpty
+              ? const Center(
+                  child: Text(
+                    "No songs in this playlist",
+                    style: TextStyle(color: Colors.white, fontSize: 16),
+                  ),
+                )
+              : ListView.builder(
+                  itemCount: currentPlaylist!["songs"].length,
+                  itemBuilder: (context, index) {
+                    final song = currentPlaylist!["songs"][index];
+                    return GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          currentSong = song["title"];
+                          _audioPlayer.play(DeviceFileSource(song["path"]!));
+                          _isPlaying = true;
+                        });
+                      },
+                      
+                          onLongPress: () => _showSongOptionsDialog(index, isPlaylistContext: true),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8.0),
+                        child: Row(
+                          children: [
+                            Icon(Icons.music_note, color: Colors.grey[400]),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                song["title"]!,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+        ),
+      ],
+    );
+  }
+}
+
+
+
+  // Updated create playlist function
+  void _createPlaylist() {
+    TextEditingController _controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: Colors.grey[800],
+          title: const Text(
+            'Enter Playlist Name',
+            style: TextStyle(color: Colors.white),
+          ),
+          content: TextField(
+            controller: _controller,
+            style: const TextStyle(color: Colors.white),
+            
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: Colors.white),
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                setState(() {
+                  playlists.add({"name": _controller.text, "songs": []});
+                  expandedStates =
+                      List<bool>.filled(playlists.length, false); // Resync
+                });
+                Navigator.pop(context);
+              },
+              child: const Text(
+                'Create',
+                style: TextStyle(color: Colors.white),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // Add playlist options dialog
+  void _showPlaylistOptionsDialog(int index) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: Colors.grey[800],
+          title: const Text(
+            'Playlist Options',
+            style: TextStyle(color: Colors.white),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  _renamePlaylist(index);
+                },
+                child: const Text(
+                  'Rename',
+                  style: TextStyle(color: Colors.white),
+                ),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  _deletePlaylist(index);
+                },
+                child: const Text(
+                  'Delete',
+                  style: TextStyle(color: Colors.white),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // Add rename playlist function
+  void _renamePlaylist(int index) {
+    TextEditingController _controller = TextEditingController();
+    _controller.text = playlists[index]["name"];
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: Colors.grey[800],
+          title: const Text(
+            'Rename Playlist',
+            style: TextStyle(color: Colors.white),
+          ),
+          content: TextField(
+            controller: _controller,
+            style: const TextStyle(color: Colors.white),
+            decoration: const InputDecoration(
+              hintText: 'Enter new name',
+              hintStyle: TextStyle(color: Colors.white),
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: Colors.white),
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                setState(() {
+                  playlists[index]["name"] = _controller.text;
+                });
+                Navigator.pop(context);
+              },
+              child: const Text(
+                'Save',
+                style: TextStyle(color: Colors.white),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // Add delete playlist function
+  void _deletePlaylist(int index) {
+    setState(() {
+      playlists.removeAt(index);
+      expandedStates = List<bool>.filled(playlists.length, false); // Resync
+    });
   }
 
   // Function to switch tabs
@@ -87,7 +555,12 @@ class _HomePageState extends State<HomePage> {
       });
     }
   }
-
+// Delete a song from the current playlist
+  void _deleteSongFromPlaylist(int index) {
+    setState(() {
+      currentPlaylist!["songs"].removeAt(index);
+    });
+  }
   // Function to handle sign-out confirmation dialog
   void _showSignOutDialog() {
     showDialog(
@@ -128,7 +601,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   // Function to show the options dialog when a song is long-pressed
-  void _showSongOptionsDialog(int index) {
+ void _showSongOptionsDialog(int index, {bool isPlaylistContext = false}) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -140,49 +613,181 @@ class _HomePageState extends State<HomePage> {
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start, // Align to the left
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
               TextButton(
                 onPressed: () {
                   Navigator.pop(context);
-                  _renameSong(index);
+                  isPlaylistContext
+                      ? _renameSongInPlaylist(index)
+                      : _renameSong(index);
                 },
                 child: const Text(
                   'Rename',
                   style: TextStyle(color: Colors.white),
                 ),
               ),
+              if (!isPlaylistContext) // Only show Add to Playlist for main songs tab
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    _addToPlaylist(index);
+                  },
+                  child: const Text(
+                    'Add to Playlist',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                ),
               TextButton(
                 onPressed: () {
                   Navigator.pop(context);
-                  _moveSong(index);
+                  isPlaylistContext
+                      ? _deleteSongFromPlaylist(index)
+                      : _deleteSong(index);
                 },
-                child: const Text(
-                  'Move to',
-                  style: TextStyle(color: Colors.white),
-                ),
-              ),
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  _deleteSong(index);
-                },
-                child: const Text(
-                  'Delete',
-                  style: TextStyle(color: Colors.white),
-                ),
-              ),
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                },
-                child: const Text(
-                  'Back',
-                  style: TextStyle(color: Colors.white),
-                ),
+                child: isPlaylistContext
+                    ? const Text(
+                        'Remove from Playlist',
+                        style: TextStyle(color: Colors.white),
+                      )
+                    : const Text(
+                        'Delete',
+                        style: TextStyle(color: Colors.white),
+                      ),
               ),
             ],
           ),
+        );
+      },
+    );
+  }
+
+// Specific to playlist context: Rename a song
+  void _renameSongInPlaylist(int index) {
+    TextEditingController _controller = TextEditingController();
+    _controller.text = currentPlaylist!["songs"][index]["title"]!;
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: Colors.grey[800],
+          title: const Text(
+            'Rename Song',
+            style: TextStyle(color: Colors.white),
+          ),
+          content: TextField(
+            controller: _controller,
+            style: const TextStyle(color: Colors.white),
+            decoration: const InputDecoration(
+              hintText: 'Enter new name',
+              hintStyle: TextStyle(color: Colors.white),
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Text(
+                'Cancel',
+                style: TextStyle(color: Colors.white),
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                setState(() {
+                  currentPlaylist!["songs"][index]["title"] = _controller.text;
+                });
+                Navigator.pop(context);
+              },
+              child: const Text(
+                'Save',
+                style: TextStyle(color: Colors.white),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+// Function to add a song to a playlist
+  void _addToPlaylist(int songIndex) {
+    String? selectedPlaylist;
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              backgroundColor: Colors.grey[800],
+              title: const Text(
+                'Add to Playlist',
+                style: TextStyle(color: Colors.white),
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'Where do you want to add this song?',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                  const SizedBox(height: 16),
+                  DropdownButton<String>(
+                    value: selectedPlaylist,
+                    dropdownColor: Colors.grey[900],
+                    hint: const Text(
+                      'Select a playlist',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                    items: playlists.map((playlist) {
+                      return DropdownMenuItem<String>(
+                        value: playlist["name"],
+                        child: Text(
+                          playlist["name"]!,
+                          style: const TextStyle(color: Colors.white),
+                        ),
+                      );
+                    }).toList(),
+                    onChanged: (String? value) {
+                      setState(() {
+                        selectedPlaylist = value;
+                      });
+                    },
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                  },
+                  child: const Text(
+                    'Cancel',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                ),
+                TextButton(
+                  onPressed: () {
+                    if (selectedPlaylist != null) {
+                      setState(() {
+                        final playlist = playlists
+                            .firstWhere((p) => p["name"] == selectedPlaylist);
+                        playlist["songs"].add(songs[songIndex]);
+                      });
+                      Navigator.pop(context);
+                    }
+                  },
+                  child: const Text(
+                    'Add',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                ),
+              ],
+            );
+          },
         );
       },
     );
@@ -286,7 +891,9 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    // Listen to the audio player position and duration changes
+    expandedStates = List<bool>.filled(playlists.length, false);
+
+
     _audioPlayer.onPositionChanged.listen((Duration p) {
       setState(() {
         _currentPosition = p;
@@ -304,9 +911,10 @@ class _HomePageState extends State<HomePage> {
   void dispose() {
     super.dispose();
     _audioPlayer.dispose();
+    _searchController.dispose();
   }
 
-  @override
+ @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
@@ -396,62 +1004,11 @@ class _HomePageState extends State<HomePage> {
                 ],
               ),
               const SizedBox(height: 16),
-              Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.add_circle, color: Colors.white),
-                    onPressed: pickMusicFile,
-                  ),
-                  const SizedBox(width: 8),
-                  const Text(
-                    "Add a local music file",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
-                  ),
-                ],
+              Expanded(
+                child: isSongsTab ? _buildSongsTab() : _buildPlaylistsTab(),
               ),
               const SizedBox(height: 16),
-              Expanded(
-                child: ListView.builder(
-                  itemCount: songs.length,
-                  itemBuilder: (context, index) {
-                    final song = songs[index];
-                    return GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          _currentIndex = index;
-                          currentSong = song["title"];
-                          _audioPlayer.play(DeviceFileSource(song["path"]!));
-                          _isPlaying = true;
-                        });
-                      },
-                      onLongPress: () => _showSongOptionsDialog(index),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8.0),
-                        child: Row(
-                          children: [
-                            Icon(Icons.music_note, color: Colors.grey[400]),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                song["title"]!,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 16,
-                                ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
+              
               if (currentSong != null)
                 Container(
                   color: Colors.grey[900],
