@@ -1,0 +1,108 @@
+-- Create songs table with string user_id for Firebase
+CREATE TABLE public.songs (
+    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+    created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    title text NOT NULL,
+    path text NOT NULL,
+    user_id text NOT NULL -- Changed to text for Firebase UID
+);
+
+-- Create playlists table with string user_id for Firebase
+CREATE TABLE public.playlists (
+    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+    created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    name text NOT NULL,
+    user_id text NOT NULL -- Changed to text for Firebase UID
+);
+
+-- Create playlist_songs junction table
+CREATE TABLE public.playlist_songs (
+    id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+    created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+    playlist_id uuid REFERENCES public.playlists(id) ON DELETE CASCADE NOT NULL,
+    song_id uuid REFERENCES public.songs(id) ON DELETE CASCADE NOT NULL,
+    UNIQUE(playlist_id, song_id)
+);
+
+-- Enable RLS (Row Level Security) on all tables
+ALTER TABLE public.songs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.playlists ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.playlist_songs ENABLE ROW LEVEL SECURITY;
+
+-- Create RLS policies for songs using Firebase auth
+CREATE POLICY "Users can view their own songs"
+    ON public.songs
+    FOR SELECT
+    USING (auth.jwt() ->> 'sub' = user_id);
+
+CREATE POLICY "Users can insert their own songs"
+    ON public.songs
+    FOR INSERT
+    WITH CHECK (auth.jwt() ->> 'sub' = user_id);
+
+CREATE POLICY "Users can update their own songs"
+    ON public.songs
+    FOR UPDATE
+    USING (auth.jwt() ->> 'sub' = user_id)
+    WITH CHECK (auth.jwt() ->> 'sub' = user_id);
+
+CREATE POLICY "Users can delete their own songs"
+    ON public.songs
+    FOR DELETE
+    USING (auth.jwt() ->> 'sub' = user_id);
+
+-- Create RLS policies for playlists using Firebase auth
+CREATE POLICY "Users can view their own playlists"
+    ON public.playlists
+    FOR SELECT
+    USING (auth.jwt() ->> 'sub' = user_id);
+
+CREATE POLICY "Users can insert their own playlists"
+    ON public.playlists
+    FOR INSERT
+    WITH CHECK (auth.jwt() ->> 'sub' = user_id);
+
+CREATE POLICY "Users can update their own playlists"
+    ON public.playlists
+    FOR UPDATE
+    USING (auth.jwt() ->> 'sub' = user_id)
+    WITH CHECK (auth.jwt() ->> 'sub' = user_id);
+
+CREATE POLICY "Users can delete their own playlists"
+    ON public.playlists
+    FOR DELETE
+    USING (auth.jwt() ->> 'sub' = user_id);
+
+-- Create RLS policies for playlist_songs
+CREATE POLICY "Users can view their playlist songs"
+    ON public.playlist_songs
+    FOR SELECT
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.playlists
+            WHERE id = playlist_songs.playlist_id
+            AND user_id = auth.jwt() ->> 'sub'
+        )
+    );
+
+CREATE POLICY "Users can insert songs to their playlists"
+    ON public.playlist_songs
+    FOR INSERT
+    WITH CHECK (
+        EXISTS (
+            SELECT 1 FROM public.playlists
+            WHERE id = playlist_songs.playlist_id
+            AND user_id = auth.jwt() ->> 'sub'
+        )
+    );
+
+CREATE POLICY "Users can delete songs from their playlists"
+    ON public.playlist_songs
+    FOR DELETE
+    USING (
+        EXISTS (
+            SELECT 1 FROM public.playlists
+            WHERE id = playlist_songs.playlist_id
+            AND user_id = auth.jwt() ->> 'sub'
+        )
+    );
